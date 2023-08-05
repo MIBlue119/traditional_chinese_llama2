@@ -13,14 +13,12 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from llama_flash_attn_monkey_patch import replace_llama_attn_with_flash_attn
-replace_llama_attn_with_flash_attn()
-
 import os
 import copy
 from dataclasses import dataclass, field
 import json
 import pathlib
+from pathlib import Path
 from typing import Dict, Optional, Sequence
 
 import numpy as np
@@ -30,14 +28,23 @@ import datasets
 import transformers
 from transformers import Trainer
 from transformers.trainer_pt_utils import LabelSmoother
-
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments
+from peft import LoraConfig,  prepare_model_for_kbit_training, get_peft_model
+from trl import SFTTrainer
+from huggingface_hub import login
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 
 @dataclass
+class FineTunedModelArguments:
+    qlora_model_name: Optional[str] = field(default="traditional_chinese_qlora_llama2")
+    hf_api_key: Optional[str] = field(default="") # Change this to your own HF API key
+    hf_username: Optional[str] = field(default="taiwan_llama2") # Change this to your own HF username
+
+@dataclass
 class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="facebook/opt-125m")
+    model_name_or_path: Optional[str] = field(default="NousResearch/Llama-2-7b-chat-hf")
 
 
 @dataclass
@@ -53,7 +60,7 @@ class DataArguments:
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
     cache_dir: Optional[str] = field(default=None)
-    optim: str = field(default="adamw_torch")
+    optim: str = field(default="paged_adamw_8bit")
     model_max_length: int = field(
         default=512,
         metadata={
@@ -220,7 +227,8 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                 data_collator=data_collator)
 
 
-class CustomTrainer(Trainer):
+#class CustomTrainer(Trainer):
+class CustomTrainer(SFTTrainer):
     def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
         if self.fsdp is not None:
             if output_dir is None:
@@ -246,15 +254,55 @@ def train():
     global local_rank
 
     parser = transformers.HfArgumentParser(
-        (ModelArguments, DataArguments, TrainingArguments)
+        (FineTunedModelArguments, ModelArguments, DataArguments, TrainingArguments)
     )
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    finetuned_model_args, model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     local_rank = training_args.local_rank
+
+    # Create directories to store final qlora fine-tuned model
+    script_dir = Path(__file__).parent.absolute()
+    project_dir = script_dir.parent.absolute()
+    default_qlora_model_path = os.path.join(project_dir, finetuned_model_args.qlora_model_name)
+    os.makedirs(default_qlora_model_path, exist_ok=True)
+
+    # login to your huggingface account with your API key for push qlora model to your huggingface accoun
+    try:
+        # Get the API token from the finetuned_model_args
+        hf_api_key = finetuned_model_args.hf_api_key
+        # Login to the Hugging Face Hub
+        login(token=hf_api_key)
+    except Exception as e:
+        print(e)
+        print("Please set the HF_API_KEY at train.sh to push the model to the Hugging Face Hub.")
+
+    # BitsAndBytesConfig int-4 config
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16
+    )
     model = transformers.AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
+        quantization_config=bnb_config,
         cache_dir=training_args.cache_dir,
     )
     model.config.use_cache = False
+
+    # LoRA config based on QLoRA paper
+    peft_config = LoraConfig(
+            lora_alpha=16,
+            lora_dropout=0.1,
+            r=64,
+            bias="none",
+            task_type="CAUSAL_LM",
+    )
+
+
+    # prepare model for training
+    model = prepare_model_for_kbit_training(model)
+    model = get_peft_model(model, peft_config)
+
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -267,7 +315,13 @@ def train():
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
 
     trainer = CustomTrainer(
-        model=model, tokenizer=tokenizer, args=training_args, **data_module
+        model=model, 
+        tokenizer=tokenizer, 
+        args=training_args,
+        dataset_text_field="text",
+        peft_config=peft_config,
+        max_seq_length=training_args.model_max_length,
+        **data_module
     )
 
     if training_args.deepspeed or training_args.gradient_checkpointing:
@@ -278,7 +332,16 @@ def train():
         trainer.train()
     trainer.save_state()
     print("Ready to save model")
-    trainer.save_model(training_args.output_dir)
+    model.save_pretrained(default_qlora_model_path)
+    print("Model saved to", default_qlora_model_path)
+
+    # Push to the huggingace Hub
+    try:
+        default_huggingface_repo = f"{finetuned_model_args.hf_username}/{finetuned_model_args.qlora_model_name}"
+        model.push_to_hub(default_huggingface_repo , use_auth_token=True)
+    except Exception as e:
+        print(e)
+        print("Please set the HF_API_KEY/HF_USERNAME at train.sh to push the model to the Hugging Face Hub.")
 
 
 if __name__ == "__main__":
