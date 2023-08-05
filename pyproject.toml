@@ -21,6 +21,7 @@ pydantic-settings = "^2.0.2"
 loguru = "^0.7.0"
 scipy = "^1.11.1"
 sentencepiece = "^0.1.99"
+huggingface-hub = "0.16.4"
 
 
 [build-system]
