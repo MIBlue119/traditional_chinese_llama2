@@ -3,7 +3,10 @@
 Practice to finetune Llama2 on traditional chinese instruction dataset at Llama2 chat model.
 I use qlora and the alpaca translated dataset to finetune llama2-7b model at rtx3090(24GB VRAM) with 9 hours.
 
-Thanks for NTU NLP Lab's alapaca dataset: [alpaca-tw_en-align.json](./alpaca-tw-en-align.json): [ntunpllab](https://github.com/ntunlplab/traditional-chinese-alpaca) translate Stanford Alpaca 52k dataset
+Thanks for these references:
+- NTU NLP Lab's alapaca dataset: [alpaca-tw_en-align.json](./alpaca-tw-en-align.json): [ntunpllab](https://github.com/ntunlplab/traditional-chinese-alpaca) translate Stanford Alpaca 52k dataset
+- [Chinese Llama 2 7B train.py](https://github.com/LinkSoul-AI/Chinese-Llama-2-7b/blob/main/train.py)
+- [Load the pretrained model in 4-bit precision and Set training with LoRA according to hf's trl lib](https://github.com/lvwerra/trl/blob/main/examples/scripts/sft_trainer.py): QLoRA finetuning
 
 ## Basic Demo
 
@@ -71,9 +74,6 @@ HF_USERNAME="weiren119"
 - [ ] Convert to ggml or kapathy's Llama2.c model
 
 ## Reference
-- Modify the training code from 
-    - [Chinese Llama 2 7B train.py](https://github.com/LinkSoul-AI/Chinese-Llama-2-7b/blob/main/train.py)
-    - [Load the pretrained model in 4-bit precision and Set training with LoRA according to hf's trl lib](https://github.com/lvwerra/trl/blob/main/examples/scripts/sft_trainer.py): QLoRA
 - Some settings and intro for qlora: https://levelup.gitconnected.com/fine-tuning-llama-2-model-harnessing-single-gpu-efficiency-with-qlora-f89d1862a94
 ### Sources
 - use pydantic:https://itnext.io/elegantly-handle-environment-variables-in-python-with-pydantic-452aae26f34
