@@ -286,6 +286,13 @@ def train():
         model_args.model_name_or_path,
         quantization_config=bnb_config,
         cache_dir=training_args.cache_dir,
+        # pretraining_tp  (`int`, *optional*, defaults to `1`): Experimental feature. Tensor parallelism rank used during pretraining
+        # currently, we need to set to 1 to avoid some error at forward pass: `RuntimeError: mat1 and mat2 shapes cannot be multiplied (880x5120 and 1x2560)`
+        # related issue discussion: 
+        # https://github.com/huggingface/transformers/issues/24961
+        # https://github.com/TimDettmers/bitsandbytes/issues/610
+        # meta also set the pretraining_tp=1 in the config file: https://huggingface.co/meta-llama/Llama-2-13b-hf/blob/main/config.json
+        pretraining_tp=1,
     )
     model.config.use_cache = False
 
