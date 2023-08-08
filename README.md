@@ -12,6 +12,9 @@ Thanks for these references:
 - traditional chinese qlora finetuned Llama2 merge model: [weiren119/traditional_chinese_qlora_llama2_merged](https://huggingface.co/weiren119/traditional_chinese_qlora_llama2_merged)
 - traditional chinese qlora adapter model: [weiren119/traditional_chinese_qlora_llama2](https://huggingface.co/weiren119/traditional_chinese_qlora_llama2)
 
+## Online Demo
+- [Run the qlora finetuned model at colab](https://colab.research.google.com/drive/1OYXvhY-8KjEDaGhOLrJe4omjtFgOWjy1?usp=sharing): May need colab pro or colab pro+
+
 ## Installation
 ```
 $conda create --name llama2 python=3.10.2
