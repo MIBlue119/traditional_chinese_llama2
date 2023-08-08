@@ -59,7 +59,8 @@ $./train.sh
 ```
 
 ### Inference
-- modify the variable settings at `infer.sh`
+- modify the variable settings at `infer.sh` to inference with your qlora finetuned model 
+    - Or use the defualt qlora traditional finetuned model
 ```
 MODEL_PATH="NousResearch/Llama-2-7b-chat-hf" 
 
@@ -79,6 +80,31 @@ HF_USERNAME="weiren119"
 ./infer.sh
 ```
 
+### Merge the qlora adapter back to orginal model
+- Modiy the settings at `merge.sh` to merge your finetuned adapter back to model
+- Execute with `merge.sh` to merge model
+
+### Upload the merged model to huggingface
+- reference: https://huggingface.co/docs/hub/repositories-getting-started
+```
+$ cd ${OUTPUT_MERGED_DIR}
+
+# Intiate `git-lfs` to track file large than 10MB
+$ git lfs install
+
+# Model size may bigger than 5G
+$ huggingface-cli lfs-enable-largefiles .
+
+# create model repository at https://huggingface.co/new
+# intial the directory with git 
+# set the remote
+$ git remote add origin https://huggingface.co/${YOUR_USERNAME}/${YOUR_MERGED_REPO_NAME}
+
+# Push files
+git add .
+git commit -m "First model version"  # You can choose any descriptive message
+git push
+```
 ## TODO
 
 - [ ] Optimize the model with more SFT dataset 
