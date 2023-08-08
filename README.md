@@ -8,9 +8,9 @@ Thanks for these references:
 - [Chinese Llama 2 7B train.py](https://github.com/LinkSoul-AI/Chinese-Llama-2-7b/blob/main/train.py)
 - [Load the pretrained model in 4-bit precision and Set training with LoRA according to hf's trl lib](https://github.com/lvwerra/trl/blob/main/examples/scripts/sft_trainer.py): QLoRA finetuning
 
-## Basic Demo
-
-![Base Demo](./assets/traditional_chinese_llama2.jpg)
+## Resources
+- traditional chinese qlora finetuned Llama2 merge model: [weiren119/traditional_chinese_qlora_llama2_merged](https://huggingface.co/weiren119/traditional_chinese_qlora_llama2_merged)
+- traditional chinese qlora adapter model: [weiren119/traditional_chinese_qlora_llama2](https://huggingface.co/weiren119/traditional_chinese_qlora_llama2)
 
 ## Installation
 ```
@@ -18,6 +18,17 @@ $conda create --name llama2 python=3.10.2
 $pip install poetry
 $poetry install
 ```
+## Basic Demo
+- Run the terminal demo: `./infer.sh`
+![Base Demo](./assets/traditional_chinese_llama2.jpg)
+
+- Run the gadio demo
+```
+$cd example/basic-chat
+$python app.py
+```
+![Gradio Demo](./assets/gradio_example.jpg)
+
 ## Usage
 ### Finetuning
 - modify the variable settings at `train.sh`
